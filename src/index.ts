@@ -7,11 +7,14 @@ export interface Config { }
 
 export const Config: Schema<Config> = Schema.object({})
 
+export const usage = '国内网络环境使用需要配置代理，<a href="/plugins">点击跳转到全局设置</a>'
+
+
 export function apply(ctx: Context) {
   // write your plugin here
   const sh = new SciHub(ctx)
   const cmd = ctx.command('scihub <text...>', '获取论文下载直链')
-    .option('limit', '-l <limit:number> 限制搜索结果数量(未实现)')
+    .option('limit', '-l <limit:posint> 限制搜索结果数量(未实现)')
     .option('download', '-d 下载搜索结果（发不出）')
     .action(async ({ session, options }, text) => {
 
