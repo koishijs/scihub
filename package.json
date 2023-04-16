@@ -1,0 +1,28 @@
+{
+  "name": "koishi-plugin-scihub",
+  "description": "获取论文下载直链",
+  "version": "0.1.0",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "dist"
+  ],
+  "author": "42 <42@koishi.chat>",
+  "contributors": [
+    "42 <42@koishi.chat>"
+  ],
+  "license": "MIT",
+  "scripts": {},
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin"
+  ],
+  "peerDependencies": {
+    "koishi": "^4.12.4"
+  },
+  "devDependencies": {
+    "cheerio": "^1.0.0-rc.12"
+  }
+}
