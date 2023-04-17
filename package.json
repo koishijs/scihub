@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-scihub",
   "description": "获取论文下载直链",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -21,9 +21,6 @@
   ],
   "peerDependencies": {
     "koishi": "^4.12.4"
-  },
-  "devDependencies": {
-    "cheerio": "^1.0.0-rc.12"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12"
