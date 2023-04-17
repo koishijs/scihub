@@ -1,5 +1,5 @@
-import { Context, Schema, h } from 'koishi'
-import SciHub from './scihub'
+import { Context, Schema } from 'koishi'
+import { load } from 'cheerio'
 
 export const name = 'scihub'
 
@@ -7,38 +7,44 @@ export interface Config { }
 
 export const Config: Schema<Config> = Schema.object({})
 
-export const usage = '国内网络环境使用需要配置代理，<a href="/plugins">点击跳转到全局设置</a>'
-
-
 export function apply(ctx: Context) {
-  // write your plugin here
-  const sh = new SciHub(ctx)
-  const cmd = ctx.command('scihub <text...>', '获取论文下载直链')
-    .option('limit', '-l <limit:posint> 限制搜索结果数量(未实现)')
-    .option('download', '-d 下载搜索结果（发不出）')
-    .action(async ({ session, options }, text) => {
 
-      if (!text?.trim()) return session.execute(`help ${name}`)
+  const SCHOLARS_BASE_URL = 'https://scholar.google.com/scholar'
+  const HEADERS = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36' }
 
-      session.send(h.text('正在搜索...'))
-      // const searchResults = await sh.search(text, options.limit)
-      const searchResults = await sh.search(text)
-
-      if (options.download) {
-        searchResults.papers.map(async paper => {
-          const res = await sh.download(paper.url)
-          if (!res.err) await session.send(h.file(res.pdf, 'application/pdf'))
-          else session.send(res.err)
-        })
+  function getDirectLink(directRes: string) {
+    const $direct = load(directRes)
+    const directLink = $direct('iframe').attr('src')
+    return directLink?.startsWith('//') ? `http:${directLink}` : directLink
+  }
+  async function getSciHubDirectLink(query: string) {
+    try {
+      const searchRes = await ctx.http.get(SCHOLARS_BASE_URL, { params: { q: query }, headers: HEADERS })
+      const $search = load(searchRes)
+      const firstPaperUrl = $search('div.gs_r').filter((_, paper) => !$search(paper).find('table').length).first().find('div.gs_ggs.gs_fl a').attr('href') || $search('h3.gs_rt a').attr('href')
+      if (firstPaperUrl) {
+        const sciHubRes = await ctx.http.get('https://sci-hub.now.sh/', { headers: HEADERS })
+        const $sciHub = load(sciHubRes)
+        const sciHubBaseUrl = $sciHub('a[href*="sci-hub."]').first().attr('href') + '/'
+        const directRes = await ctx.http.get(sciHubBaseUrl + firstPaperUrl, { headers: HEADERS })
+        const directLink = getDirectLink(directRes) || getDirectLink(await ctx.http.get(sciHubBaseUrl + query, { headers: HEADERS })) // try again with query if failed
+        return directLink
+      } else {
+        throw new Error(`Failed to find a download link for the first result of query ${query}`)
       }
-      else {
-        const result = h('figure')
-        await Promise.all(searchResults.papers.map(async paper => {
-          let url = await sh.getDirectUrl(paper.url)
-          result.children.push(h('message', paper.name + '\n' + (url ||= paper.url)))
-          await new Promise(resolve => setTimeout(resolve, 1000)) //sleep 1s
-        }))
-        session.send(result)
+    } catch (error) {
+      throw new Error(`Failed to complete search with query ${query} due to request exception.\n${error}`)
+    }
+  }
+
+  ctx.command('scihub <dio...>', '获取论文下载链接')
+    .action(async ({ session }, query) => {
+      if (!query) return session.execute('help scihub')
+      const link = await getSciHubDirectLink(query)
+      if (link) {
+        return link
+      } else {
+        return '未找到下载链接'
       }
     })
 }
